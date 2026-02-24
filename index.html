@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MISSION READY: Anduril Strategic Sourcing Flashcards</title>
+    <style>
+        :root {
+            --anduril-black: #0a0a0a;
+            --anduril-white: #f5f5f5;
+            --anduril-gray: #1a1a1a;
+            --military-green: #4b5320;
+            --warning-orange: #ff8c00;
+            --danger-red: #8b0000;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        body {
+            background-color: var(--anduril-black);
+            color: var(--anduril-white);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            overflow: hidden;
+            text-transform: uppercase;
+            padding-top: 60px;
+            position: fixed;
+        }
+        #hud {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--military-green);
+            padding: 10px 15px;
+            font-size: 0.65rem;
+            background: var(--anduril-black);
+            z-index: 100;
+        }
+        .card-container {
+            width: 90vw;
+            max-width: 350px;
+            height: 60vh;
+            max-height: 500px;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid var(--military-green);
+            background: rgba(26, 26, 26, 0.95);
+        }
+        .card.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            text-align: center;
+            overflow-y: auto;
+            touch-action: pan-y;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: var(--military-green);
+            color: var(--anduril-white);
+        }
+        .label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 0.55rem;
+            color: var(--military-green);
+        }
+        .card-back .label { color: var(--anduril-black); }
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 90vw;
+            max-width: 350px;
+            touch-action: none;
+        }
+        button {
+            background: transparent;
+            border: 1px solid var(--military-green);
+            color: var(--anduril-white); /* Increased readability from military-green */
+            padding: 12px 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.65rem;
+            transition: 0.2s;
+            touch-action: manipulation;
+        }
+        button:active { background: var(--military-green); color: var(--anduril-white); }
+        button.warning { color: var(--warning-orange); border-color: var(--warning-orange); }
+        button.warning:active { background: var(--warning-orange); color: var(--anduril-black); }
+        
+        #progress {
+            margin-top: 10px;
+            font-size: 0.6rem;
+            color: var(--warning-orange);
+        }
+        .category { font-size: 0.6rem; color: var(--warning-orange); margin-bottom: 8px; }
+        #question { font-size: 0.9rem; line-height: 1.3; }
+        #answer { font-size: 0.85rem; line-height: 1.3; }
+
+        #menu-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: var(--military-green);
+            color: var(--anduril-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            border: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            touch-action: manipulation;
+        }
+        #sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 80%;
+            max-width: 300px;
+            height: 100%;
+            background: var(--anduril-gray);
+            border-left: 1px solid var(--military-green);
+            z-index: 150;
+            transition: 0.3s;
+            padding: 70px 20px 20px;
+            overflow-y: auto;
+            touch-action: pan-y;
+        }
+        #sidebar.open { right: 0; }
+        .sidebar-section { margin-bottom: 25px; }
+        .sidebar-header {
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--military-green);
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            color: var(--warning-orange);
+        }
+        .list-item {
+            font-size: 0.6rem;
+            padding: 8px;
+            border: 1px solid var(--military-green);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .restore-btn {
+            font-size: 0.5rem;
+            padding: 2px 5px;
+            border-color: var(--warning-orange);
+            color: var(--warning-orange);
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            z-index: 140;
+        }
+        .overlay.open { display: block; }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <span>ANDURIL_STRATEGIC_PREP</span>
+        <span id="timer">ACTIVE</span>
+    </div>
+
+    <div class="card-container" id="container">
+        <div class="card" id="card">
+            <div class="card-face card-front">
+                <div class="label">QUERY</div>
+                <div class="category" id="category">CATEGORY</div>
+                <div id="question">INITIALIZING...</div>
+            </div>
+            <div class="card-face card-back">
+                <div class="label">GUIDANCE</div>
+                <div id="answer">INITIALIZING...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="progress">INDEX: 1/30 | FLAGS: 0</div>
+
+    <div class="controls">
+        <button onclick="prevCard(event)">PREV</button>
+        <button onclick="nextCard(event)">NEXT</button>
+        <button id="flag-btn" class="warning" onclick="toggleFlag(event)">FLAG</button>
+        <button onclick="hideCard(event)">HIDE</button>
+    </div>
+
+    <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <div id="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-header">FLAGGED_INTEL</div>
+            <div id="flagged-list">NONE_DETECTED</div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-header">HIDDEN_INTEL</div>
+            <div id="hidden-list">NONE_DETECTED</div>
+        </div>
+        <button style="width:100%; margin-top:20px;" onclick="resetMission()">RESET_ALL_DATA</button>
+    </div>
+
+    <script>
+        const deck = [
+            { category: "MISSION_OBJECTIVE", q: "What is Anduril's core mission and how does Indirect/CapEx sourcing support it?", a: "Mission: Transform US & Allied capabilities with advanced tech (Lattice OS). Sourcing Role: Rapidly secure the sophisticated tools and infrastructure required to build hardware at the speed of software. Answer focus: Velocity as a competitive advantage." },
+            { category: "STRATEGIC_FIT", q: "Why move from traditional defense/automotive to Anduril's model?", a: "Focus on 'Months, Not Years.' Emphasize ability to operate in high-velocity environments where CapEx decisions must scale fast without traditional prime bureaucracy. Answer focus: Agility and mission-alignment." },
+            { category: "CAPEX_DOMAIN", q: "How do you manage 'Sophisticated Tools' differently than direct materials?", a: "Focus on Total Cost of Ownership (TCO), lead-time risk for custom machinery, and technical lifecycle. CapEx requires deep alignment with Engineering on 'make vs buy'. Answer focus: Technical category expertise." },
+            { category: "BEHAVIORAL_SPEED", q: "Tell me about a time you had to move fast with incomplete data.", a: "Anduril values action. Explain how you mitigated risk (e.g., phased contracts) while maintaining velocity. Show you can 'wear different hats' to remove roadblocks. Answer focus: Decisiveness." },
+            { category: "GREENFIELD_STRATEGY", q: "How do you evaluate a supplier for a 'Greenfield' project with millions in CapEx?", a: "Assess financial stability, manufacturing capacity, technical roadmap, and scalability. Focus on their ability to grow at Anduril's trajectory. Answer focus: Scaling infrastructure." },
+            { category: "CROSS_FUNCTIONAL", q: "Engineering wants a $2M machine with a 12-month lead time. How do you handle it?", a: "Influence technical specs. Can we adapt existing tech? Phased delivery? Use data to show tradeoffs between custom specs and time-to-market. Answer focus: Removing engineering bottlenecks." },
+            { category: "STRATEGIC_COMPETITION", q: "What is your strategy for securing supply chains in an era of strategic competition?", a: "Resilience, multi-sourcing for critical assets, and reducing dependency on adversarial nations for high-tech manufacturing equipment. Answer focus: Geopolitical supply chain risk." },
+            { category: "FINANCIAL_DATA", q: "Explain your process for TCO (Total Cost of Ownership) in CapEx.", a: "Include maintenance, power, floor space, training, downtime risks, and residual value. Use data to anchor component/supplier selection. Answer focus: Data-driven procurement." },
+            { category: "NEGOTIATION_POWER", q: "How do you handle a sole-source supplier for a critical long-term asset?", a: "Leverage partnership/roadmap value. Negotiate on service levels and innovation access if price is fixed. Use 'Should-Cost' modeling to anchor discussions. Answer focus: Leverage in sole-source scenarios." },
+            { category: "DISRUPTION_VALUE", q: "How do you personally 'disrupt industry norms' in your sourcing approach?", a: "Challenge 'the way it's always been done.' Example: Bringing startup-speed sourcing to high-compliance defense projects. Answer focus: Innovation in procurement." },
+            { category: "CONTRACT_LIFECYCLE", q: "What commercial agreement elements do you prioritize for high-value machinery?", a: "Lead-time guarantees, capacity reservations, IP protection, and clear Statements of Work (SOW). Include 'flex capacity' clauses. Answer focus: Contractual risk mitigation." },
+            { category: "NPI_TRANSITION", q: "What is the Indirect Sourcing Manager's role in the NPI to Mass Production transition?", a: "Ensuring manufacturing infrastructure is validated and installed BEFORE the ramp. Managing 'Contract Development' to 'Operations' handoff. Answer focus: Production readiness." },
+            { category: "EXECUTIVE_INFLUENCE", q: "How do you influence an executive team to change a commodity strategy?", a: "Present data-driven roadmaps tied to product lifecycle. Show the risk of inaction (fragility) vs. the ROI of a new strategic partnership. Answer focus: Upward management." },
+            { category: "CRITICAL_FAILURE", q: "A key CapEx supplier fails an audit two weeks before a milestone. Action plan?", a: "On-site visit for root cause. Parallel path: Adapt existing tech or use secondary supplier. Goal: Advance the product despite the setback. Answer focus: Resilience under pressure." },
+            { category: "HYPERGROWTH_SCALING", q: "Anduril is growing 2x/year. How do you ensure your sourcing strategy scales?", a: "Standardizing equipment specs, building 'Flex Capacity' into contracts, and utilizing data streams for visibility. Answer focus: Sustainable growth architecture." },
+            { category: "SUPPLIER_INNOVATION", q: "What metrics do you use to track 'Innovation' from an Indirect supplier?", a: "Roadmap alignment, early access to new tech, and contribution to process improvement beyond simple price cuts. Answer focus: Strategic value vs. cost." },
+            { category: "TEAM_INTEGRATION", q: "Tell me about a time you had to 'fill a gap' outside your job description.", a: "Anduril needs 'Strong Team Players' who remove roadblocks regardless of 'lane.' Show ownership beyond your title. Answer focus: Collaborative ownership." },
+            { category: "THE_LATTICE_HARDWARE", q: "How does Lattice OS change the way we should think about hardware sourcing?", a: "Hardware is the sensor/effector for AI. Sourcing must focus on the 'Family of Systems' compatibility and data-integrity. Answer focus: Product-centric sourcing." },
+            { category: "SUPPLY_BOTTLE_NECK", q: "Describe a complex supply bottleneck you resolved under SpaceX/Tesla-style pressure.", a: "Explain the high-stakes context, the data-driven pivot, and the 'extra mile' taken to secure supply. Emphasize speed and resolution. Answer focus: High-velocity problem solving." },
+            { category: "INDIRECT_SPEND_IMPACT", q: "How can Indirect sourcing significantly impact Anduril's bottom line beyond price?", a: "Reducing lead-times (speed to market), improving asset utilization, and optimizing vendor footprints to support NPI milestones. Answer focus: Strategic financial impact." },
+            { category: "BEHAVIORAL_CONVICTION", q: "Tell me about a time you disagreed with an engineering lead on a sourcing decision.", a: "Explain the conflict, the data you presented (e.g., TCO/lead-time), and how you reached a resolution that served the mission. Answer focus: Principled disagreement." },
+            { category: "VENDOR_DIVERSIFICATION", q: "How do you decide when to move from a single-source startup to a global supplier?", a: "Evaluate the threshold where scale/risk outweighs the agility of the startup. Focus on the transition from NPI to Mass Production. Answer focus: Lifecycle risk management." },
+            { category: "CAPEX_BUDGETING", q: "How do you manage CapEx spend against a volatile project roadmap?", a: "Phased commitments, modular equipment selection, and tight alignment with Finance on cash-flow timing. Answer focus: Financial agility." },
+            { category: "PROCESS_AUTOMATION", q: "How would you use Python/AI to optimize Anduril's indirect supply chain?", a: "Automating lead-time tracking, predictive risk modeling for machinery parts, or should-cost automation. Answer focus: Technical leverage." },
+            { category: "SUPPLIER_RELATIONSHIPS", q: "How do you turn a transactional vendor into a strategic partner?", a: "Transparent roadmapping, shared risk/reward structures, and long-term capacity commitments. Answer focus: Strategic sourcing depth." },
+            { category: "AUDIT_COMPLIANCE", q: "How do you balance defense-industry compliance with high-speed sourcing?", a: "Building compliance into the workflow 'at the speed of software' rather than as a post-process bottleneck. Answer focus: Efficient governance." },
+            { category: "TOOLING_STRATEGY", q: "Should we own the tooling at our suppliers? Why or why not?", a: "Ownership provides control and portability but increases maintenance/liability. Argue for ownership in high-customization/IP-sensitive cases. Answer focus: Asset control strategy." },
+            { category: "GLOBAL_LOGISTICS", q: "How do you account for geopolitical instability when sourcing large machinery from overseas?", a: "Diversified shipping lanes, increased safety stock for critical spares, and prioritizing 'friendly-shoring.' Answer focus: Global risk mitigation." },
+            { category: "BEHAVIORAL_OWNERSHIP", q: "Tell me about a time you failed to meet a sourcing milestone. What did you do?", a: "Own the mistake. Explain the immediate mitigation, the 'pre-mortem' applied to future projects, and the transparency with stakeholders. Answer focus: Accountability." },
+            { category: "MISSION_ALIGNMENT", q: "How would you explain the value of CapEx sourcing to a Lattice OS engineer?", a: "We provide the 'foundry' for your code. Without the right machinery, the AI has no physical presence in the mission. Answer focus: Sourcing as an enabler." }
+        ];
+
+        let currentIndex = 0;
+        let flagged = new Set();
+        let hidden = new Set();
+
+        function updateCard() {
+            const card = document.getElementById('card');
+            card.classList.remove('flipped');
+            
+            if (hidden.has(currentIndex) && hidden.size < deck.length) {
+                nextCard();
+                return;
+            }
+
+            setTimeout(() => {
+                const currentData = deck[currentIndex];
+                document.getElementById('category').innerText = currentData.category;
+                document.getElementById('question').innerText = currentData.q;
+                document.getElementById('answer').innerText = currentData.a;
+                document.getElementById('progress').innerText = `INDEX: ${currentIndex + 1}/${deck.length} | FLAGS: ${flagged.size}`;
+                
+                document.getElementById('flag-btn').innerText = flagged.has(currentIndex) ? 'UNFLAG' : 'FLAG';
+                document.getElementById('card').style.borderColor = flagged.has(currentIndex) ? 'var(--warning-orange)' : 'var(--military-green)';
+                updateSidebarLists();
+            }, 50);
+        }
+
+        function flipCard() { document.getElementById('card').classList.toggle('flipped'); }
+
+        function findNextVisible(index, step) {
+            let next = (index + step + deck.length) % deck.length;
+            let attempts = 0;
+            while (hidden.has(next) && attempts < deck.length) {
+                next = (next + step + deck.length) % deck.length;
+                attempts++;
+            }
+            return attempts < deck.length ? next : index;
+        }
+
+        function nextCard(e) {
+            if(e) e.stopPropagation();
+            currentIndex = findNextVisible(currentIndex, 1);
+            updateCard();
+        }
+
+        function prevCard(e) {
+            if(e) e.stopPropagation();
+            currentIndex = findNextVisible(currentIndex, -1);
+            updateCard();
+        }
+
+        function toggleFlag(e) {
+            e.stopPropagation();
+            if (flagged.has(currentIndex)) flagged.delete(currentIndex);
+            else flagged.add(currentIndex);
+            updateCard();
+        }
+
+        function hideCard(e) {
+            e.stopPropagation();
+            hidden.add(currentIndex);
+            if (hidden.size === deck.length) {
+                alert("ALL INTEL HIDDEN. RESETTING DECK.");
+                hidden.clear();
+            } else {
+                nextCard();
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        }
+
+        function updateSidebarLists() {
+            const fList = document.getElementById('flagged-list');
+            const hList = document.getElementById('hidden-list');
+            
+            fList.innerHTML = flagged.size ? "" : "NONE_DETECTED";
+            flagged.forEach(idx => {
+                fList.innerHTML += `<div class="list-item"><span>Q${idx+1}: ${deck[idx].category}</span><button class="restore-btn" onclick="goToCard(${idx})">GOTO</button></div>`;
+            });
+
+            hList.innerHTML = hidden.size ? "" : "NONE_DETECTED";
+            hidden.forEach(idx => {
+                hList.innerHTML += `<div class="list-item"><span>Q${idx+1}: ${deck[idx].category}</span><button class="restore-btn" onclick="restoreCard(${idx})">UNHIDE</button></div>`;
+            });
+        }
+
+        function goToCard(idx) {
+            currentIndex = idx;
+            if (hidden.has(idx)) hidden.delete(idx);
+            toggleSidebar();
+            updateCard();
+        }
+
+        function restoreCard(idx) {
+            hidden.delete(idx);
+            updateSidebarLists();
+        }
+
+        function resetMission() {
+            if(confirm("CONFIRM FULL MISSION RESET?")) {
+                flagged.clear();
+                hidden.clear();
+                currentIndex = 0;
+                updateCard();
+                toggleSidebar();
+            }
+        }
+
+        let touchstartX = 0;
+        let touchstartY = 0;
+        document.getElementById('container').addEventListener('touchstart', e => { 
+            touchstartX = e.changedTouches[0].screenX; 
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+        
+        document.getElementById('container').addEventListener('touchend', e => {
+            let touchendX = e.changedTouches[0].screenX;
+            let touchendY = e.changedTouches[0].screenY;
+            
+            const diffX = Math.abs(touchendX - touchstartX);
+            const diffY = Math.abs(touchendY - touchstartY);
+
+            if (diffX > 50 && diffX > diffY) {
+                if (touchendX < touchstartX) nextCard();
+                else prevCard();
+            } else if (diffX < 10 && diffY < 10) {
+                flipCard();
+            }
+        }, {passive: true});
+
+        updateCard();
+    </script>
+</body>
+</html>
